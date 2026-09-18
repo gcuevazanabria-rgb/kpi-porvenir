@@ -1,0 +1,2340 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>El Porvenir · Control de KPIs</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
+<style>
+  :root{
+    --bg:#EEF1F3;
+    --surface:#FFFFFF;
+    --surface-2:#F5F7F8;
+    --border:#D7DEE3;
+    --text:#1B2429;
+    --text-2:#5B6770;
+    --accent:#B65C1F;
+    --accent-ink:#FFFFFF;
+    --accent2:#2F7A72;
+    --success:#3F8F5F;
+    --danger:#C4453B;
+    --font-head:'Space Grotesk', system-ui, sans-serif;
+    --font-body:'Inter', system-ui, sans-serif;
+    --radius:10px;
+    --shadow: 0 1px 2px rgba(20,25,29,.06), 0 4px 14px rgba(20,25,29,.05);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#12171B;
+      --surface:#1B2227;
+      --surface-2:#20282D;
+      --border:#2B343B;
+      --text:#E6EBEE;
+      --text-2:#93A0A8;
+      --accent:#E2892E;
+      --accent-ink:#16110A;
+      --accent2:#4FB3A9;
+      --success:#5FBE86;
+      --danger:#E2635A;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 20px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#12171B;
+    --surface:#1B2227;
+    --surface-2:#20282D;
+    --border:#2B343B;
+    --text:#E6EBEE;
+    --text-2:#93A0A8;
+    --accent:#E2892E;
+    --accent-ink:#16110A;
+    --accent2:#4FB3A9;
+    --success:#5FBE86;
+    --danger:#E2635A;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 20px rgba(0,0,0,.35);
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:var(--font-body);
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:inherit;}
+
+  .app{
+    max-width:1180px;
+    margin:0 auto;
+    padding:20px 20px 64px;
+  }
+
+  header.top{
+    display:flex;
+    align-items:flex-end;
+    justify-content:space-between;
+    gap:16px;
+    flex-wrap:wrap;
+    padding-bottom:20px;
+    border-bottom:2px solid var(--accent);
+    margin-bottom:24px;
+    position:relative;
+  }
+  header.top::after{
+    content:'';
+    position:absolute;
+    left:0; right:0; bottom:-2px;
+    height:2px;
+    background:linear-gradient(90deg, var(--accent), var(--accent2), transparent);
+  }
+  .brand{
+    display:flex;
+    align-items:center;
+    gap:14px;
+  }
+  .brand-mark{
+    width:46px;height:46px;flex:0 0 auto;
+    border-radius:10px;
+    background:linear-gradient(150deg, var(--accent), color-mix(in srgb, var(--accent) 70%, #000 15%));
+    color:var(--accent-ink);
+    display:flex;align-items:center;justify-content:center;
+    font-family:var(--font-head);
+    font-weight:700;
+    font-size:18px;
+    letter-spacing:.02em;
+    box-shadow:0 2px 6px color-mix(in srgb, var(--accent) 35%, transparent);
+  }
+  h1{
+    font-family:var(--font-head);
+    font-weight:700;
+    font-size:22px;
+    margin:0;
+    letter-spacing:.2px;
+  }
+  .brand p{
+    margin:3px 0 0;
+    color:var(--text-2);
+    font-size:12.5px;
+    letter-spacing:.02em;
+    text-transform:uppercase;
+    font-weight:600;
+  }
+  .top-meta{
+    text-align:right;
+    color:var(--text-2);
+    font-size:13px;
+    line-height:1.6;
+  }
+  .top-meta strong{color:var(--text);font-weight:600;text-transform:capitalize;}
+  .top-meta div:last-child{
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:.05em;
+    font-weight:600;
+    color:var(--accent2);
+  }
+
+  nav.tabs{
+    display:flex;
+    gap:6px;
+    background:var(--surface-2);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:4px;
+    width:fit-content;
+    margin-bottom:22px;
+  }
+  nav.tabs button{
+    border:none;
+    background:transparent;
+    color:var(--text-2);
+    font-family:var(--font-body);
+    font-weight:600;
+    font-size:14px;
+    padding:9px 18px;
+    border-radius:9px;
+    cursor:pointer;
+    transition:background .15s ease, color .15s ease;
+  }
+  nav.tabs button.active{
+    background:var(--surface);
+    color:var(--text);
+    box-shadow:var(--shadow);
+  }
+
+  .view{display:none;}
+  .view.active{display:block;}
+
+  .area-row{
+    display:flex;
+    gap:8px;
+    overflow-x:auto;
+    padding-bottom:6px;
+    margin-bottom:14px;
+  }
+  .area-pill{
+    flex:0 0 auto;
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    border:1px solid var(--border);
+    background:var(--surface);
+    color:var(--text-2);
+    font-family:var(--font-body);
+    font-weight:600;
+    font-size:13.5px;
+    padding:9px 16px;
+    border-radius:999px;
+    cursor:pointer;
+    white-space:nowrap;
+    transition:all .15s ease;
+  }
+  .area-icon{
+    width:17px;
+    height:17px;
+    flex:0 0 auto;
+    color:var(--dot,var(--text-2));
+    transition:color .15s ease;
+  }
+  .area-pill.active .area-icon{color:#fff;}
+  .area-pill.active{
+    border-color:transparent;
+    background:var(--dot,var(--accent));
+    color:#fff;
+  }
+
+  .coverage-strip{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    flex-wrap:wrap;
+    background:var(--surface-2);
+    border:1px solid var(--border);
+    border-radius:9px;
+    padding:12px 16px;
+    margin-bottom:18px;
+  }
+  .coverage-strip .cs-label{
+    font-size:12px;
+    font-weight:600;
+    color:var(--text-2);
+    margin-right:4px;
+  }
+  .cs-dot{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:4px;
+    cursor:pointer;
+    border:none;
+    background:none;
+    font-family:var(--font-body);
+    padding:0;
+  }
+  .cs-dot .circle{
+    width:22px;height:22px;
+    border-radius:50%;
+    border:2px solid var(--border);
+    background:var(--surface);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .cs-dot.done .circle{
+    background:var(--success);
+    border-color:var(--success);
+  }
+  .cs-dot.current .circle{
+    border-color:var(--accent);
+  }
+  .cs-dot .lbl{font-size:10px;color:var(--text-2);white-space:nowrap;}
+  .cs-dot.done .lbl{color:var(--success);font-weight:600;}
+
+  .subtab-row{
+    display:flex;
+    gap:6px;
+    margin-bottom:18px;
+    flex-wrap:wrap;
+  }
+  .subtab{
+    flex:0 0 auto;
+    border:1px solid var(--border);
+    background:var(--surface-2);
+    color:var(--text-2);
+    font-family:var(--font-body);
+    font-weight:600;
+    font-size:13px;
+    padding:8px 14px;
+    border-radius:8px;
+    cursor:pointer;
+  }
+  .subtab.active{
+    background:var(--accent2);
+    border-color:var(--accent2);
+    color:#fff;
+  }
+
+  .card{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    padding:22px;
+  }
+
+  .field-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(190px,1fr));
+    gap:14px;
+    margin-top:14px;
+  }
+  .field{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+  }
+  .field label{
+    font-size:12.5px;
+    font-weight:600;
+    color:var(--text-2);
+  }
+  .field .unit{font-weight:400;color:var(--text-2);}
+  .field .hint{font-size:11.5px;color:var(--text-2);font-weight:400;margin-top:-2px;}
+  .field input, .field select, .field textarea{
+    font-family:var(--font-body);
+    font-size:15px;
+    padding:11px 12px;
+    border-radius:8px;
+    border:1px solid var(--border);
+    background:var(--surface-2);
+    color:var(--text);
+    width:100%;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus{
+    outline:2px solid var(--accent2);
+    outline-offset:1px;
+  }
+  .field textarea{resize:vertical;min-height:64px;font-family:var(--font-body);}
+
+  .tbl-input{
+    font-family:var(--font-body);
+    font-size:13.5px;
+    padding:8px 9px;
+    border-radius:6px;
+    border:1px solid var(--border);
+    background:var(--surface-2);
+    color:var(--text);
+    transition:border-color .12s ease, box-shadow .12s ease;
+  }
+  .tbl-input:focus{
+    outline:none;
+    border-color:var(--accent2);
+    box-shadow:0 0 0 3px color-mix(in srgb, var(--accent2) 18%, transparent);
+  }
+  .tbl-input:disabled{cursor:not-allowed;}
+
+  .field input[type="file"]{
+    padding:8px;
+    background:var(--surface-2);
+  }
+  #f-imagen-preview img{
+    max-width:160px;
+    border-radius:8px;
+    border:1px solid var(--border);
+    margin-top:8px;
+    display:block;
+  }
+
+  .meta-row{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(190px,1fr));
+    gap:14px;
+    padding-bottom:18px;
+    margin-bottom:18px;
+    border-bottom:1px dashed var(--border);
+  }
+
+  .section-label{
+    font-family:var(--font-head);
+    font-weight:600;
+    font-size:15px;
+    display:flex;
+    align-items:center;
+    gap:9px;
+    margin:0;
+  }
+  .section-label .dot{width:9px;height:9px;border-radius:50%;background:var(--dot,var(--accent));}
+  .section-sub{color:var(--text-2);font-size:13px;margin:4px 0 0;font-weight:400;}
+
+  .shared-box{
+    background:var(--surface-2);
+    border:1px solid var(--border);
+    border-radius:9px;
+    padding:16px;
+    margin:16px 0 20px;
+  }
+  .shared-box .tag{
+    display:inline-block;
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:.02em;
+    color:var(--accent2);
+    background:color-mix(in srgb, var(--accent2) 14%, transparent);
+    padding:3px 9px;
+    border-radius:999px;
+    margin-bottom:10px;
+  }
+
+  .equipo-card{
+    border:1px solid var(--border);
+    border-left:3px solid var(--border);
+    border-radius:9px;
+    padding:16px;
+    margin-top:14px;
+    background:var(--surface);
+    transition:border-left-color .15s ease, box-shadow .15s ease;
+  }
+  .equipo-card:hover{
+    border-left-color:var(--dot, var(--accent2));
+    box-shadow:0 1px 2px rgba(20,25,29,.04), 0 3px 10px rgba(20,25,29,.04);
+  }
+  .equipo-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    margin-bottom:4px;
+  }
+  .equipo-title{
+    font-family:var(--font-head);
+    font-weight:600;
+    font-size:14.5px;
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .equipo-title .dot{width:8px;height:8px;border-radius:50%;background:var(--dot,var(--accent2));box-shadow:0 0 0 3px color-mix(in srgb, var(--dot,var(--accent2)) 18%, transparent);}
+  .dispo-chip{
+    font-size:12px;
+    font-weight:700;
+    padding:4px 10px;
+    border-radius:999px;
+    background:var(--surface-2);
+    color:var(--text-2);
+    border:1px solid var(--border);
+    white-space:nowrap;
+  }
+  .dispo-chip.ok{color:var(--success);border-color:var(--success);}
+  .dispo-chip.warn{color:var(--danger);border-color:var(--danger);}
+
+  .estado-toggle{
+    display:inline-flex;
+    border:1px solid var(--border);
+    border-radius:999px;
+    overflow:hidden;
+  }
+  .estado-btn{
+    border:none;
+    background:var(--surface-2);
+    color:var(--text-2);
+    font-family:var(--font-body);
+    font-weight:600;
+    font-size:12px;
+    padding:6px 13px;
+    cursor:pointer;
+  }
+  .estado-btn.active[data-estado="funcionando"]{background:var(--success);color:#fff;}
+  .estado-btn.active[data-estado="parado"]{background:var(--danger);color:#fff;}
+
+  .estado-btn-sm{
+    border:none;
+    background:var(--surface-2);
+    color:var(--text-2);
+    font-family:var(--font-body);
+    font-weight:600;
+    font-size:10.5px;
+    padding:4px 9px;
+    cursor:pointer;
+  }
+  .estado-btn-sm.active[data-estado="funcionando"]{background:var(--success);color:#fff;}
+  .estado-btn-sm.active[data-estado="parado"]{background:var(--danger);color:#fff;}
+  .estado-toggle-sm{
+    display:inline-flex;
+    border:1px solid var(--border);
+    border-radius:999px;
+    overflow:hidden;
+  }
+
+  .motivo-field{display:none;margin-top:14px;}
+  .motivo-field.show{display:block;}
+
+  .actions{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    margin-top:20px;
+  }
+  button.primary{
+    font-family:var(--font-body);
+    font-weight:700;
+    font-size:15px;
+    color:var(--accent-ink);
+    background:var(--accent);
+    border:none;
+    padding:13px 26px;
+    border-radius:9px;
+    cursor:pointer;
+    box-shadow:0 1px 2px rgba(20,25,29,.08), 0 2px 8px color-mix(in srgb, var(--accent) 25%, transparent);
+    transition:filter .12s ease, transform .12s ease, box-shadow .12s ease;
+  }
+  button.primary:disabled{opacity:.5;cursor:default;box-shadow:none;}
+  button.primary:hover:not(:disabled){filter:brightness(1.06);transform:translateY(-1px);box-shadow:0 2px 4px rgba(20,25,29,.1), 0 4px 14px color-mix(in srgb, var(--accent) 30%, transparent);}
+  button.primary:active:not(:disabled){transform:translateY(0);}
+  .toast{
+    display:inline-flex;
+    align-items:center;
+    gap:7px;
+    font-size:13px;
+    color:var(--success);
+    font-weight:600;
+    opacity:0;
+    transform:translateY(2px);
+    transition:opacity .2s ease, transform .2s ease;
+    padding:7px 13px;
+    border-radius:999px;
+    background:color-mix(in srgb, var(--success) 12%, transparent);
+  }
+  .toast.show{opacity:1;transform:translateY(0);}
+  .toast.err{color:var(--danger);background:color-mix(in srgb, var(--danger) 12%, transparent);}
+  .toast::before{content:'✓';font-weight:700;}
+  .toast.err::before{content:'!';}
+
+  .filters{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    margin-bottom:16px;
+  }
+  .filters select, .filters input{
+    font-family:var(--font-body);
+    font-size:13.5px;
+    padding:8px 10px;
+    border-radius:8px;
+    border:1px solid var(--border);
+    background:var(--surface);
+    color:var(--text);
+  }
+  .filters .grow{flex:1;min-width:160px;}
+
+  .status-line{
+    display:flex;align-items:center;gap:8px;
+    color:var(--text-2);font-size:12.5px;margin-bottom:14px;
+  }
+  .status-dot{width:7px;height:7px;border-radius:50%;background:var(--success);}
+  .status-dot.off{background:var(--danger);}
+
+  table{width:100%;border-collapse:collapse;font-size:13.5px;}
+  thead th{
+    text-align:left;
+    font-size:11.5px;
+    text-transform:uppercase;
+    letter-spacing:.04em;
+    color:var(--text-2);
+    font-weight:600;
+    padding:0 10px 10px;
+    border-bottom:1px solid var(--border);
+  }
+  tbody td{
+    padding:11px 10px;
+    border-bottom:1px solid var(--border);
+    vertical-align:top;
+  }
+  tbody tr.row:hover{background:var(--surface-2);cursor:pointer;}
+  .area-chip{
+    display:inline-flex;align-items:center;gap:6px;
+    font-weight:600;font-size:12.5px;
+  }
+  .area-chip .dot{width:7px;height:7px;border-radius:50%;background:var(--dot,var(--accent));}
+  .shift-tag{
+    font-size:11.5px;font-weight:600;color:var(--text-2);
+    background:var(--surface-2);border:1px solid var(--border);
+    padding:2px 8px;border-radius:999px;
+  }
+  .detail-row td{
+    background:var(--surface-2);
+    padding:14px 16px;
+  }
+  .detail-block{margin-bottom:12px;}
+  .detail-block:last-child{margin-bottom:0;}
+  .detail-block-title{
+    font-family:var(--font-head);
+    font-weight:600;
+    font-size:12.5px;
+    color:var(--text-2);
+    margin:0 0 8px;
+  }
+  .detail-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(170px,1fr));
+    gap:10px 20px;
+  }
+  .detail-item{font-size:13px;}
+  .detail-item .k{color:var(--text-2);display:block;font-size:11.5px;margin-bottom:2px;}
+  .detail-item .v{font-family:var(--font-head);font-weight:600;}
+  .empty{
+    text-align:center;
+    padding:50px 20px;
+    color:var(--text-2);
+  }
+  .empty strong{display:block;color:var(--text);font-family:var(--font-head);font-size:16px;margin-bottom:6px;}
+
+  @media (max-width:640px){
+    .top-meta{display:none;}
+    .card{padding:16px;}
+    nav.tabs{width:100%;}
+    nav.tabs button{flex:1;}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="top">
+    <div class="brand">
+      <div class="brand-mark">EP</div>
+      <div>
+        <h1>Control de KPIs — El Porvenir</h1>
+        <p>Nexa Pasco · Chancado · Molienda · Flotación · Filtro · Bombas · Relave</p>
+      </div>
+    </div>
+    <div class="top-meta">
+      <div id="today-label">—</div>
+      <div>Registro compartido de planta</div>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <button class="active" data-view="registrar">Registrar</button>
+    <button data-view="historial">Historial</button>
+  </nav>
+
+  <!-- REGISTRAR -->
+  <section class="view active" id="view-registrar">
+    <div class="area-row" id="area-row"></div>
+    <div class="subtab-row" id="subtab-row" style="display:none;"></div>
+
+    <div class="coverage-strip" id="coverage-strip">
+      <span class="cs-label">Control de hoy:</span>
+    </div>
+
+    <div class="meta-row">
+      <div class="field">
+        <label for="f-operador">Operador</label>
+        <input type="text" id="f-operador" placeholder="Nombre y apellido" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="f-bloque">Bloque horario</label>
+        <select id="f-bloque"></select>
+      </div>
+      <div class="field">
+        <label>Guardia</label>
+        <select id="f-guardia">
+          <option value="">Selecciona...</option>
+          <option value="A">Guardia A</option>
+          <option value="B">Guardia B</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="f-fecha">Fecha</label>
+        <input type="date" id="f-fecha">
+      </div>
+    </div>
+
+    <div id="form-container"></div>
+
+    <div class="field" style="margin-top:14px;">
+      <label for="f-obs">Observaciones (opcional)</label>
+      <textarea id="f-obs" placeholder="Incidencias, cambios de parámetro, notas para el ingeniero de guardia..."></textarea>
+    </div>
+
+    <div class="field" style="margin-top:14px;">
+      <label for="f-imagen">Foto del suceso (opcional)</label>
+      <input type="file" accept="image/*" id="f-imagen">
+      <span class="hint" id="f-imagen-hint">Puedes adjuntar una foto si hubo alguna incidencia</span>
+      <div id="f-imagen-preview"></div>
+    </div>
+
+    <div class="actions">
+      <button class="primary" id="btn-save">Guardar registro</button>
+      <span class="toast" id="toast">Registro guardado</span>
+    </div>
+  </section>
+
+  <!-- HISTORIAL -->
+  <section class="view" id="view-historial">
+    <div class="status-line"><span class="status-dot" id="live-dot"></span><span id="live-label">Conectando al registro compartido...</span></div>
+
+    <div class="filters">
+      <select id="filter-area">
+        <option value="">Todas las áreas</option>
+      </select>
+      <select id="filter-guardia">
+        <option value="">Ambas guardias</option>
+        <option value="A">Guardia A</option>
+        <option value="B">Guardia B</option>
+      </select>
+      <input type="text" id="filter-operador" placeholder="Buscar operador..." class="grow">
+      <input type="date" id="filter-desde" title="Desde">
+      <input type="date" id="filter-hasta" title="Hasta">
+    </div>
+
+    <div class="card" style="padding:0;overflow:auto;">
+      <table>
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th>Bloque</th>
+            <th>Guardia</th>
+            <th>Área</th>
+            <th>Operador</th>
+            <th>Resumen</th>
+          </tr>
+        </thead>
+        <tbody id="tbody-historial"></tbody>
+      </table>
+      <div class="empty" id="empty-historial" style="display:none;">
+        <strong>Todavía no hay registros</strong>
+        Los KPIs que registren los operadores aparecerán aquí en tiempo real.
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+(function(){
+
+  // ============================================================
+  // CONFIGURACIÓN DE FIREBASE
+  // ============================================================
+  var firebaseConfig = {
+    apiKey: "AIzaSyCEPxcMppW89L8pUFXUZcwKOagq7RYOR1w",
+    authDomain: "kpi-planta-el-porvenir.firebaseapp.com",
+    projectId: "kpi-planta-el-porvenir",
+    storageBucket: "kpi-planta-el-porvenir.firebasestorage.app",
+    messagingSenderId: "433304820907",
+    appId: "1:433304820907:web:45c4bbb816870b01002bee"
+  };
+  firebase.initializeApp(firebaseConfig);
+  var KPIS_COLLECTION = 'kpis';
+  // ============================================================
+
+  // ---------------- config ----------------
+
+  // Simple areas: flat list of numeric fields (still por definir con el usuario)
+  var SIMPLE_AREAS = {
+    relave: {
+      label: 'Relave', color: '#5B7553',
+      fields: [
+        {id:'tonelaje', label:'Tonelaje depositado', unit:'TM/día'},
+        {id:'solidos', label:'% Sólidos', unit:'%'},
+        {id:'densidad', label:'Densidad de pulpa', unit:'g/cm³'},
+        {id:'nivel_presa', label:'Nivel de la presa', unit:'m'},
+        {id:'ph', label:'pH del efluente', unit:''}
+      ]
+    }
+  };
+
+  var MOTIVOS_PARADA = ['Problema de chancadora', 'Falta de carga'];
+  var MOTIVOS_PARADA_MOLIENDA = ['Problema de molino', 'Falta de carga'];
+
+  var MOLIENDA_COLOR = '#2F7A72';
+  var MOLIENDA_SUBTABS = [
+    {id:'primaria', label:'Molienda primaria'},
+    {id:'secundaria', label:'Molienda secundaria'},
+    {id:'zaf', label:'ZAF'},
+    {id:'hidrocavex', label:'Hidrociclón y Cavex'}
+  ];
+  var MOLINOS_PRIMARIOS = [
+    {id:'molino1', label:'Molino 1', color:'#3F7EA6'},
+    {id:'molino2', label:'Molino 2', color:'#6B5CA5'}
+  ];
+  var MOLINOS_SECUNDARIOS = [
+    {id:'sec1', label:'Secundario #1', color:'#3F7EA6'},
+    {id:'sec3', label:'Secundario #3', color:'#6B5CA5'},
+    {id:'sec7', label:'Secundario #7', color:'#B0552F'},
+    {id:'sec4', label:'Secundario #4', color:'#5B7553'},
+    {id:'sec6', label:'Secundario #6', color:'#B65C1F'}
+  ];
+  var ZAF_CIRCUITOS = [
+    {id:'c1', label:'Circuito 1', equipos:[
+      {id:'zaf1', label:'ZAF 1'}, {id:'zaf2', label:'ZAF 2'}, {id:'zaf3', label:'ZAF 3'}
+    ]},
+    {id:'c2', label:'Circuito 2', equipos:[
+      {id:'zaf4', label:'ZAF 4'}, {id:'zaf5', label:'ZAF 5'}, {id:'zaf6', label:'ZAF 6'}, {id:'zaf7', label:'ZAF 7'}
+    ]}
+  ];
+  var HIDROCAVEX_CIRCUITOS = [
+    {id:'c1', label:'Circuito 1', equipos:[
+      {id:'hidro1', label:'Hidrociclón 1'}, {id:'hidro2', label:'Hidrociclón 2'}, {id:'cavex_c1', label:'Cavex 400'}
+    ]},
+    {id:'c2', label:'Circuito 2', equipos:[
+      {id:'cavex_c2', label:'Cavex 400'}
+    ]}
+  ];
+
+  var FASE2_EQUIPOS = [
+    {id:'secundaria', label:'Secundaria', color:'#3F7EA6'},
+    {id:'terciaria1', label:'Terciaria 1', color:'#6B5CA5'},
+    {id:'terciaria2', label:'Terciaria 2', color:'#B0552F'}
+  ];
+
+  var ZARANDAS = [
+    {id:'primaria', label:'Zaranda primaria', color:'#3F7EA6'},
+    {id:'secundaria1', label:'Zaranda secundaria 1', color:'#6B5CA5'},
+    {id:'secundaria2', label:'Zaranda secundaria 2', color:'#B0552F'},
+    {id:'secundaria3', label:'Zaranda secundaria 3', color:'#5B7553'}
+  ];
+
+  var BLOQUES = [
+    {id:'04-08', label:'04:00–08:00'},
+    {id:'08-12', label:'08:00–12:00'},
+    {id:'12-16', label:'12:00–16:00'},
+    {id:'16-20', label:'16:00–20:00'},
+    {id:'20-00', label:'20:00–00:00'},
+    {id:'00-04', label:'00:00–04:00'}
+  ];
+  function currentBlockSet(){
+    return BLOQUES;
+  }
+  function currentBlockId(set){
+    set = set || currentBlockSet();
+    var h = new Date().getHours();
+    if(h>=4 && h<8) return '04-08';
+    if(h>=8 && h<12) return '08-12';
+    if(h>=12 && h<16) return '12-16';
+    if(h>=16 && h<20) return '16-20';
+    if(h>=20 && h<24) return '20-00';
+    return '00-04';
+  }
+  function bloqueById(id, set){
+    set = set || currentBlockSet();
+    for(var i=0;i<set.length;i++){ if(set[i].id===id) return set[i]; }
+    return null;
+  }
+
+  var FILTRO_COLOR = '#3F7EA6';
+  var FILTROS = [
+    {id:'pb1', label:'Filtro Pb 1', color:'#3F7EA6'},
+    {id:'pb2', label:'Filtro Pb 2', color:'#6B5CA5'},
+    {id:'cu', label:'Filtro Cu', color:'#B0552F', material:true},
+    {id:'znprensa', label:'Filtro Prensa Zn', color:'#2F7A72'}
+  ];
+  var NIVELES_HUMEDAD_FILTRO = ['Súper bajo','Bajo','Medio','Alto','Muy alto'];
+
+  var BOMBAS_COLOR = '#B0552F';
+  var BOMBAS_LIST = [
+    {id:'b1', label:'Bomba 1', color:'#3F7EA6'},
+    {id:'b2', label:'Bomba 2', color:'#6B5CA5'},
+    {id:'b3', label:'Bomba 3', color:'#2F7A72'},
+    {id:'b4', label:'Bomba 4', color:'#5B7553'}
+  ];
+
+  var FLOTACION_COLOR = '#6B5CA5';
+  var FLOTACION_SUBTABS = [
+    {id:'bulk', label:'Circuito Bulk'},
+    {id:'separacion', label:'Separación Pb-Cu'},
+    {id:'zn', label:'Flotación Zn'},
+    {id:'plateo_pbcu', label:'Plateo Pb/Cu'},
+    {id:'plateo_znrelave', label:'Plateo Zn/Relave'}
+  ];
+  var PLATEO_GROUPS = {
+    plateo_pbcu: {label:'Plateo Pb / Cu', items:[
+      {id:'pb', label:'Plateo Pb', color:'#3F7EA6'},
+      {id:'cu', label:'Plateo Cu', color:'#B0552F'}
+    ]},
+    plateo_znrelave: {label:'Plateo Zn / Relave', items:[
+      {id:'zn', label:'Plateo Zn', color:'#2F7A72'},
+      {id:'relave', label:'Plateo Relave', color:'#6B5CA5', especial:true}
+    ]}
+  };
+  var FLOTACION_CIRCUITOS = {
+    bulk: {label:'Circuito Bulk', celdas:[
+      {id:'fm100', label:'FM-100'},
+      {id:'ok30', label:'OK-30'},
+      {id:'ok50', label:'OK-50'},
+      {id:'unit1', label:'Celda Unitaria 1', tienePH:true},
+      {id:'unit2', label:'Celda Unitaria 2', tienePH:true},
+      {id:'unit3', label:'Celda Unitaria 3'},
+      {id:'dr300', label:'DR-300'},
+      {id:'sk240', label:'SK-240'},
+      {id:'sk240ii', label:'SK-240-II'},
+      {id:'suba24_1lp', label:'SUB-A24 (1ra Limpieza)'},
+      {id:'dr100_desb', label:'DR-100 Desbaste'},
+      {id:'dr100_barr', label:'DR-100 Barrido'},
+      {id:'ok5_2lp', label:'OK-5 (2da Limpieza)'},
+      {id:'ok5_3lp', label:'OK-5 (3ra Limpieza)'}
+    ]},
+    separacion: {label:'Separación Pb-Cu', celdas:[
+      {id:'acond', label:'Acondicionador', tipo:'acond', tienePH:true},
+      {id:'ok15_1', label:'OK-1.5 (1)'},
+      {id:'ok15_2', label:'OK-1.5 (2)'},
+      {id:'ok15_3', label:'OK-1.5 (3)'},
+      {id:'ok15_4', label:'OK-1.5 (4)'},
+      {id:'ok15_5', label:'OK-1.5 (5)'},
+      {id:'dr15_1lp', label:'DR-15 (1ra Limpieza)'},
+      {id:'dr15_2lp', label:'DR-15 (2da Limpieza)'}
+    ]},
+    zn: {label:'Flotación Zn', celdas:[
+      {id:'acondzn', label:'Acondicionador de Zn (3)', tipo:'acond', tienePH:true},
+      {id:'ok100', label:'OK-100', tienePH:true},
+      {id:'fm100zn', label:'FM-100'},
+      {id:'ok50zn', label:'OK-50'},
+      {id:'ok30zn', label:'OK-30'},
+      {id:'dr300_1', label:'DR-300 (1)'},
+      {id:'dr100_desb_zn', label:'DR-100 Desbaste'},
+      {id:'dr100_barr_zn', label:'DR-100 Barrido'},
+      {id:'columna', label:'Celda Columna'},
+      {id:'ok20', label:'OK-20'},
+      {id:'dr300_2', label:'DR-300 (2)'},
+      {id:'ok10_2lp', label:'OK-10 (2da Limpieza)', tienePH:true},
+      {id:'ok5_3lp_zn', label:'OK-5 (3ra Limpieza)', tienePH:true},
+      {id:'suba24_3lp', label:'SUB-A24 (3ra Limpieza)'}
+    ]}
+  };
+  var CHANCADO_COLOR = '#B65C1F';
+  var CHANCADO_SUBTABS = [
+    {id:'fase1', label:'Fase 1 · Primaria'},
+    {id:'fase2', label:'Fase 2 · Secundaria y terciarias'},
+    {id:'zarandas', label:'Zarandas'}
+  ];
+
+  var AREA_ORDER = ['chancado','molienda','flotacion','filtro','bombas','relave'];
+  var AREA_LABELS = {chancado:'Chancado', molienda:'Molienda', flotacion:'Flotación', filtro:'Filtro', bombas:'Bombas', relave:'Relave'};
+  var AREA_COLORS = {chancado:CHANCADO_COLOR, molienda:'#2F7A72', flotacion:'#6B5CA5', filtro:'#3F7EA6', bombas:'#B0552F', relave:'#5B7553'};
+
+  var currentArea = 'chancado';
+  var currentSub = 'fase1';
+  var db = null;
+  var records = [];
+  var expandedId = null;
+
+  // ---------- helpers ----------
+  function calcDispo(op, pa){
+    var o = parseFloat(op), p = parseFloat(pa);
+    if(isNaN(o)) o = 0;
+    if(isNaN(p)) p = 0;
+    if(o + p <= 0) return null;
+    return Math.round((o/(o+p))*1000)/10;
+  }
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
+  function num(el){
+    var v = el.value;
+    return v === '' ? undefined : parseFloat(v);
+  }
+  function txt(el){
+    var v = el.value.trim();
+    return v === '' ? undefined : v;
+  }
+  // Comprime la imagen en el navegador y la devuelve como data URL (base64),
+  // para guardarla directo en el documento de Firestore sin usar Storage.
+  function compressImageToDataUrl(file, maxWidth, quality){
+    return new Promise(function(resolve, reject){
+      var reader = new FileReader();
+      reader.onload = function(e){
+        var img = new Image();
+        img.onload = function(){
+          var scale = Math.min(1, maxWidth / img.width);
+          var w = Math.max(1, Math.round(img.width * scale));
+          var h = Math.max(1, Math.round(img.height * scale));
+          var canvas = document.createElement('canvas');
+          canvas.width = w;
+          canvas.height = h;
+          var ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, w, h);
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        };
+        img.onerror = function(){ reject(new Error('No se pudo leer la imagen')); };
+        img.src = e.target.result;
+      };
+      reader.onerror = function(){ reject(new Error('No se pudo leer el archivo')); };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  // ---------- header date ----------
+  var todayLabel = document.getElementById('today-label');
+  todayLabel.textContent = new Date().toLocaleDateString('es-PE', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
+  document.getElementById('f-fecha').value = new Date().toISOString().slice(0,10);
+
+  // ---------- bloque horario ----------
+  var fBloque = document.getElementById('f-bloque');
+  var fGuardia = document.getElementById('f-guardia');
+  function refreshBloqueOptions(){
+    var set = currentBlockSet();
+    var prevId = fBloque.value;
+    fBloque.innerHTML = '';
+    set.forEach(function(b){
+      var opt = document.createElement('option');
+      opt.value = b.id;
+      opt.textContent = b.label;
+      fBloque.appendChild(opt);
+    });
+    var stillValid = set.some(function(b){ return b.id === prevId; });
+    fBloque.value = stillValid ? prevId : currentBlockId(set);
+  }
+  refreshBloqueOptions();
+  fBloque.addEventListener('change', function(){
+    renderCoverage();
+  });
+  document.getElementById('f-fecha').addEventListener('change', renderCoverage);
+
+  // ---------- foto del suceso ----------
+  var fImagen = document.getElementById('f-imagen');
+  var imagenPreview = document.getElementById('f-imagen-preview');
+  fImagen.addEventListener('change', function(){
+    imagenPreview.innerHTML = '';
+    var file = fImagen.files && fImagen.files[0];
+    if(file){
+      var img = document.createElement('img');
+      img.src = URL.createObjectURL(file);
+      imagenPreview.appendChild(img);
+    }
+  });
+
+  // ---------- coverage strip ----------
+  var coverageStrip = document.getElementById('coverage-strip');
+  function renderCoverage(){
+    var fecha = document.getElementById('f-fecha').value;
+    var todays = records.filter(function(r){
+      if(r.fecha !== fecha) return false;
+      if(r.area !== currentArea) return false;
+      if((currentArea === 'chancado' || currentArea === 'molienda' || currentArea === 'flotacion') && r.subarea !== currentSub) return false;
+      return true;
+    });
+    var doneBlocks = {};
+    todays.forEach(function(r){ if(r.bloque) doneBlocks[r.bloque] = true; });
+
+    var blockSet = currentBlockSet();
+    var html = '<span class="cs-label">Control de hoy:</span>';
+    blockSet.forEach(function(b){
+      var done = !!doneBlocks[b.id];
+      var isCurrent = b.id === currentBlockId(blockSet);
+      html += '<button type="button" class="cs-dot' + (done?' done':'') + (isCurrent?' current':'') + '" data-bloque="' + b.id + '">' +
+        '<span class="circle">' + (done ? '✓' : '') + '</span><span class="lbl">' + b.label + '</span></button>';
+    });
+    coverageStrip.innerHTML = html;
+    coverageStrip.querySelectorAll('.cs-dot').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        fBloque.value = btn.dataset.bloque;
+        renderCoverage();
+      });
+    });
+  }
+
+  // ---------- top tabs ----------
+  var tabButtons = document.querySelectorAll('nav.tabs button');
+  tabButtons.forEach(function(btn){
+    btn.addEventListener('click', function(){
+      tabButtons.forEach(function(b){ b.classList.remove('active'); });
+      btn.classList.add('active');
+      document.querySelectorAll('.view').forEach(function(v){ v.classList.remove('active'); });
+      document.getElementById('view-' + btn.dataset.view).classList.add('active');
+    });
+  });
+
+  var AREA_ICON_PATHS = {
+    chancado: '<path d="M3 18l4-7 3 4 3-6 4 6 4-3"/><path d="M3 18h18"/>',
+    molienda: '<circle cx="12" cy="12" r="7"/><path d="M12 5v3M12 16v3M5 12h3M16 12h3"/>',
+    flotacion: '<circle cx="7" cy="16" r="1.5"/><circle cx="13" cy="9" r="2.1"/><circle cx="17.5" cy="15.5" r="1.2"/><circle cx="10" cy="5.5" r="1.2"/>',
+    filtro: '<path d="M4 4h16l-6.5 8v6l-3 1.5v-7.5z"/>',
+    bombas: '<path d="M5 12a7 7 0 0 1 12-4.9"/><path d="M19 12a7 7 0 0 1-12 4.9"/><path d="M17 3v4.1h-4.1"/><path d="M7 21v-4.1h4.1"/>',
+    relave: '<path d="M2 8c2-2 4-2 6 0s4 2 6 0 4-2 6 0"/><path d="M2 13c2-2 4-2 6 0s4 2 6 0 4-2 6 0"/><path d="M2 18c2-2 4-2 6 0s4 2 6 0 4-2 6 0"/>'
+  };
+  function areaIconSvg(key){
+    return '<svg class="area-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">' + (AREA_ICON_PATHS[key] || '') + '</svg>';
+  }
+
+  // ---------- area pills ----------
+  var areaRow = document.getElementById('area-row');
+  AREA_ORDER.forEach(function(key){
+    var pill = document.createElement('button');
+    pill.className = 'area-pill' + (key === currentArea ? ' active' : '');
+    pill.style.setProperty('--dot', AREA_COLORS[key]);
+    pill.dataset.area = key;
+    pill.innerHTML = areaIconSvg(key) + '<span>' + AREA_LABELS[key] + '</span>';
+    pill.addEventListener('click', function(){ selectArea(key); });
+    areaRow.appendChild(pill);
+  });
+
+  var subtabRow = document.getElementById('subtab-row');
+  var formContainer = document.getElementById('form-container');
+
+  function selectArea(key){
+    currentArea = key;
+    refreshBloqueOptions();
+    document.querySelectorAll('.area-pill').forEach(function(p){
+      p.classList.toggle('active', p.dataset.area === key);
+    });
+    if(key === 'chancado'){
+      renderChancadoSubtabs();
+      currentSub = currentSub && CHANCADO_SUBTABS.some(function(s){return s.id===currentSub;}) ? currentSub : 'fase1';
+      selectChancadoSub(currentSub);
+    }else if(key === 'molienda'){
+      renderMoliendaSubtabs();
+      currentSub = currentSub && MOLIENDA_SUBTABS.some(function(s){return s.id===currentSub;}) ? currentSub : 'primaria';
+      selectMoliendaSub(currentSub);
+    }else if(key === 'flotacion'){
+      renderFlotacionSubtabs();
+      currentSub = currentSub && FLOTACION_SUBTABS.some(function(s){return s.id===currentSub;}) ? currentSub : 'bulk';
+      selectFlotacionSub(currentSub);
+    }else if(key === 'filtro'){
+      subtabRow.style.display = 'none';
+      renderFiltro();
+      renderCoverage();
+    }else if(key === 'bombas'){
+      subtabRow.style.display = 'none';
+      renderBombas();
+      renderCoverage();
+    }else{
+      subtabRow.style.display = 'none';
+      renderSimpleForm(key);
+      renderCoverage();
+    }
+  }
+
+  function renderChancadoSubtabs(){
+    subtabRow.style.display = 'flex';
+    subtabRow.innerHTML = '';
+    CHANCADO_SUBTABS.forEach(function(s){
+      var b = document.createElement('button');
+      b.className = 'subtab' + (s.id === currentSub ? ' active' : '');
+      b.textContent = s.label;
+      b.addEventListener('click', function(){ selectChancadoSub(s.id); });
+      subtabRow.appendChild(b);
+    });
+  }
+
+  function selectChancadoSub(id){
+    currentSub = id;
+    document.querySelectorAll('.subtab').forEach(function(b, i){
+      b.classList.toggle('active', CHANCADO_SUBTABS[i].id === id);
+    });
+    if(id === 'fase1') renderFase1();
+    else if(id === 'fase2') renderFase2();
+    else renderZarandas();
+    renderCoverage();
+  }
+
+  function renderMoliendaSubtabs(){
+    subtabRow.style.display = 'flex';
+    subtabRow.innerHTML = '';
+    MOLIENDA_SUBTABS.forEach(function(s){
+      var b = document.createElement('button');
+      b.className = 'subtab' + (s.id === currentSub ? ' active' : '');
+      b.textContent = s.label;
+      b.addEventListener('click', function(){ selectMoliendaSub(s.id); });
+      subtabRow.appendChild(b);
+    });
+  }
+
+  function selectMoliendaSub(id){
+    currentSub = id;
+    document.querySelectorAll('.subtab').forEach(function(b, i){
+      b.classList.toggle('active', MOLIENDA_SUBTABS[i].id === id);
+    });
+    if(id === 'primaria') renderMolinos(MOLINOS_PRIMARIOS, 'Molienda primaria', 'mp', true, 'primaria');
+    else if(id === 'secundaria') renderMolinos(MOLINOS_SECUNDARIOS, 'Molienda secundaria', 'ms', false, 'secundaria');
+    else if(id === 'zaf') renderClasificacion(ZAF_CIRCUITOS, 'ZAF', 'zaf', 'zaf');
+    else renderClasificacion(HIDROCAVEX_CIRCUITOS, 'Hidrociclón y Cavex', 'hc', 'hidrocavex');
+    renderCoverage();
+  }
+
+  function renderFlotacionSubtabs(){
+    subtabRow.style.display = 'flex';
+    subtabRow.innerHTML = '';
+    FLOTACION_SUBTABS.forEach(function(s){
+      var b = document.createElement('button');
+      b.className = 'subtab' + (s.id === currentSub ? ' active' : '');
+      b.textContent = s.label;
+      b.addEventListener('click', function(){ selectFlotacionSub(s.id); });
+      subtabRow.appendChild(b);
+    });
+  }
+
+  function selectFlotacionSub(id){
+    currentSub = id;
+    document.querySelectorAll('.subtab').forEach(function(b, i){
+      b.classList.toggle('active', FLOTACION_SUBTABS[i].id === id);
+    });
+    if(id === 'plateo_pbcu' || id === 'plateo_znrelave') renderPlateo(id);
+    else renderFlotacionCircuito(id);
+    renderCoverage();
+  }
+
+  function renderFlotacionCircuito(circId){
+    var circ = FLOTACION_CIRCUITOS[circId];
+    var html = '<p class="section-label"><span class="dot" style="--dot:' + FLOTACION_COLOR + '"></span>' + circ.label + '</p>' +
+      '<p class="section-sub">pH, nivel de espuma, aspecto y aire por celda. Los acondicionadores solo piden pH.</p>' +
+      '<div style="overflow-x:auto;"><table style="min-width:640px;"><thead><tr>' +
+      '<th>Celda</th><th>pH</th><th>Nivel espuma</th><th>Aspecto espuma</th><th>Flujo aire</th>' +
+      '</tr></thead><tbody>';
+
+    circ.celdas.forEach(function(c){
+      var base = 'fl-' + circId + '-' + c.id;
+      var isAcond = c.tipo === 'acond';
+      var dis = isAcond ? ' disabled style="opacity:.35;"' : '';
+      var phDis = c.tienePH ? '' : ' disabled style="opacity:.35;" placeholder="N/A"';
+      var prevC = lastNested('flotacion', circId, 'celdas', c.id) || {};
+      var vPh = (prevC.ph !== undefined) ? ' value="' + escapeHtml(prevC.ph) + '"' : '';
+      var vEsp = (prevC.nivel_espuma !== undefined) ? ' value="' + escapeHtml(prevC.nivel_espuma) + '"' : '';
+      var vAsp = (prevC.aspecto_espuma !== undefined) ? ' value="' + escapeHtml(prevC.aspecto_espuma) + '"' : '';
+      var vAire = (prevC.flujo_aire !== undefined) ? ' value="' + escapeHtml(prevC.flujo_aire) + '"' : '';
+      html += '<tr><td style="font-weight:600;white-space:nowrap;">' + c.label + (isAcond ? ' <span class="hint">(acond.)</span>' : '') + '</td>' +
+        '<td><input type="number" step="any" inputmode="decimal" id="' + base + '-ph"' + vPh + ' class="tbl-input" style="width:70px;"' + phDis + '></td>' +
+        '<td><input type="number" step="any" inputmode="decimal" id="' + base + '-espuma"' + vEsp + ' class="tbl-input" style="width:90px;"' + dis + '></td>' +
+        '<td><input type="text" id="' + base + '-aspecto"' + vAsp + ' placeholder="Ej: blanca, cargada" class="tbl-input" style="width:150px;"' + dis + '></td>' +
+        '<td><input type="number" step="any" inputmode="decimal" id="' + base + '-aire"' + vAire + ' class="tbl-input" style="width:90px;"' + dis + '></td></tr>';
+    });
+
+    html += '</tbody></table></div>';
+    formContainer.innerHTML = html;
+  }
+
+  // ---------- Flotación: Plateo ----------
+  function renderPlateo(groupId){
+    var group = PLATEO_GROUPS[groupId];
+    var html = '<p class="section-label"><span class="dot" style="--dot:' + FLOTACION_COLOR + '"></span>' + group.label + '</p>' +
+      '<p class="section-sub">Sube una foto de la muestra plateada y anota tu estimado a ojo. En Relave, además indica la granulometría — si sale con "pepitas" gruesas, puede ser señal de que el rebose (O/F) de molienda está saliendo grueso.</p>';
+
+    group.items.forEach(function(p){
+      var base = 'pl-' + p.id;
+      var prevP = lastNested('flotacion', groupId, 'items', p.id) || {};
+      html +=
+        '<div class="equipo-card">' +
+          '<div class="equipo-head">' +
+            '<span class="equipo-title"><span class="dot" style="--dot:' + p.color + '"></span>' + p.label + '</span>' +
+          '</div>' +
+          '<div class="field-grid">' +
+            field(base + '-pct','number','Estimado a ojo','%','',prevP.pct) +
+            (p.especial ? selectField(base + '-granulometria','Granulometría',['Fina','Media','Gruesa (pepitas)'],prevP.granulometria) : '') +
+          '</div>' +
+          '<div class="field" style="margin-top:14px;">' +
+            '<label for="' + base + '-foto">Foto de la muestra</label>' +
+            '<input type="file" accept="image/*" id="' + base + '-foto">' +
+            '<div id="' + base + '-preview"></div>' +
+          '</div>' +
+        '</div>';
+    });
+
+    formContainer.innerHTML = html;
+
+    group.items.forEach(function(p){
+      var base = 'pl-' + p.id;
+      var input = document.getElementById(base + '-foto');
+      var preview = document.getElementById(base + '-preview');
+      input.addEventListener('change', function(){
+        preview.innerHTML = '';
+        var file = input.files && input.files[0];
+        if(file){
+          var img = document.createElement('img');
+          img.src = URL.createObjectURL(file);
+          preview.appendChild(img);
+        }
+      });
+    });
+  }
+
+  // ---------- Fase 1 ----------
+  function renderFase1(){
+    var prev = lastValores('chancado','fase1') || {};
+    formContainer.innerHTML =
+      '<p class="section-label"><span class="dot" style="--dot:' + CHANCADO_COLOR + '"></span>Fase 1 — Chancadora primaria (quijada)</p>' +
+      '<div class="field-grid">' +
+        field('f1-tonelaje','number','Tonelaje procesado','TM/h','',prev.tonelaje) +
+        field('f1-css','text','Ajuste del chancador (CSS)','','Ej: 4 1/4&quot; (según galga)',prev.css) +
+        selectField('f1-humedad','% Humedad',['Bajo','Medio','Alto'],prev.humedad) +
+        field('f1-horasop','number','Horas operativas','h') +
+        field('f1-horaspa','number','Horas de parada','h') +
+      '</div>' +
+      '<div class="field motivo-field" id="f1-motivo-wrap">' +
+        '<label for="f1-motivo">Motivo de parada</label>' +
+        '<select id="f1-motivo">' + motivoOptions() + '</select>' +
+      '</div>' +
+      '<div style="margin-top:14px;"><span class="dispo-chip" id="f1-dispo">Disponibilidad: —</span></div>';
+
+    var horasop = document.getElementById('f1-horasop');
+    var horaspa = document.getElementById('f1-horaspa');
+    function upd(){
+      toggleMotivo('f1-horaspa','f1-motivo-wrap');
+      updateDispoChip('f1-dispo', horasop.value, horaspa.value);
+    }
+    horasop.addEventListener('input', upd);
+    horaspa.addEventListener('input', upd);
+  }
+
+  // ---------- Fase 2 ----------
+  function renderFase2(){
+    var prevTop = lastValores('chancado','fase2') || {};
+    var html =
+      '<p class="section-label"><span class="dot" style="--dot:' + CHANCADO_COLOR + '"></span>Fase 2 — Secundaria y terciarias</p>' +
+      '<p class="section-sub">El tonelaje de faja 2 es un solo dato para las tres chancadoras. Completa cada chancadora que haya operado en el turno.</p>' +
+      '<div class="shared-box">' +
+        '<span class="tag">Dato compartido</span>' +
+        '<div class="field-grid" style="margin-top:0;">' +
+          field('f2-tonelaje','number','Tonelaje procesado (faja 2)','TM/h','',prevTop.tonelaje_faja2) +
+        '</div>' +
+      '</div>';
+
+    FASE2_EQUIPOS.forEach(function(eq){
+      var prevEq = lastNested('chancado','fase2','equipos',eq.id) || {};
+      html +=
+        '<div class="equipo-card">' +
+          '<div class="equipo-head">' +
+            '<span class="equipo-title"><span class="dot" style="--dot:' + eq.color + '"></span>' + eq.label + '</span>' +
+            '<span class="dispo-chip" id="f2-' + eq.id + '-dispo">Disponibilidad: —</span>' +
+          '</div>' +
+          '<div class="field-grid">' +
+            field('f2-' + eq.id + '-css','number','Ajuste del chancador (CSS)','pulg','',prevEq.css) +
+            field('f2-' + eq.id + '-presion','number','Presión hidráulica','MPa','',prevEq.presion) +
+            field('f2-' + eq.id + '-horasop','number','Horas operativas','h') +
+            field('f2-' + eq.id + '-horaspa','number','Horas de parada','h') +
+          '</div>' +
+          '<div class="field motivo-field" id="f2-' + eq.id + '-motivo-wrap">' +
+            '<label for="f2-' + eq.id + '-motivo">Motivo de parada</label>' +
+            '<select id="f2-' + eq.id + '-motivo">' + motivoOptions() + '</select>' +
+          '</div>' +
+        '</div>';
+    });
+
+    formContainer.innerHTML = html;
+
+    FASE2_EQUIPOS.forEach(function(eq){
+      var op = document.getElementById('f2-' + eq.id + '-horasop');
+      var pa = document.getElementById('f2-' + eq.id + '-horaspa');
+      function upd(){
+        toggleMotivo('f2-' + eq.id + '-horaspa', 'f2-' + eq.id + '-motivo-wrap');
+        updateDispoChip('f2-' + eq.id + '-dispo', op.value, pa.value);
+      }
+      op.addEventListener('input', upd);
+      pa.addEventListener('input', upd);
+    });
+  }
+
+  // ---------- Zarandas ----------
+  function renderZarandas(){
+    var html =
+      '<p class="section-label"><span class="dot" style="--dot:' + CHANCADO_COLOR + '"></span>Zarandas</p>' +
+      '<p class="section-sub">Control con malla Ro-Tap #5/16&quot;: anota cuántas partículas fuera de tamaño quedan retenidas.</p>';
+
+    ZARANDAS.forEach(function(z){
+      var prevZ = lastNested('chancado','zarandas','zarandas',z.id) || {};
+      html +=
+        '<div class="equipo-card">' +
+          '<div class="equipo-head">' +
+            '<span class="equipo-title"><span class="dot" style="--dot:' + z.color + '"></span>' + z.label + '</span>' +
+          '</div>' +
+          '<div class="field-grid">' +
+            field('za-' + z.id + '-malla','number','Control de malla (Ro-Tap #5/16&quot;)','partículas','Cantidad de partículas fuera de tamaño retenidas',prevZ.malla) +
+            field('za-' + z.id + '-horasop','number','Horas operativas','h') +
+            field('za-' + z.id + '-horaspa','number','Horas de parada','h') +
+          '</div>' +
+        '</div>';
+    });
+
+    formContainer.innerHTML = html;
+  }
+
+  // ---------- Molienda: molinos (primarios/secundarios) ----------
+  function renderMolinos(lista, titulo, prefix, incluirTonelaje, subareaId){
+    var html = '<p class="section-label"><span class="dot" style="--dot:' + MOLIENDA_COLOR + '"></span>' + titulo + '</p>' +
+      '<p class="section-sub">Control de descarga: densidad, % malla #16 y volumen de probeta, por cada molino. Si un molino está parado, márcalo y listo — no hace falta medir nada más.</p>';
+
+    lista.forEach(function(m){
+      var base = prefix + '-' + m.id;
+      var prevM = lastNested('molienda', subareaId, 'equipos', m.id) || {};
+      html +=
+        '<div class="equipo-card">' +
+          '<div class="equipo-head">' +
+            '<span class="equipo-title"><span class="dot" style="--dot:' + m.color + '"></span>' + m.label + '</span>' +
+            '<div class="estado-toggle" id="' + base + '-estado">' +
+              '<button type="button" class="estado-btn active" data-estado="funcionando">Funcionando</button>' +
+              '<button type="button" class="estado-btn" data-estado="parado">Parado</button>' +
+            '</div>' +
+          '</div>' +
+          '<div class="field-grid" id="' + base + '-medicion">' +
+            (incluirTonelaje ? field(base + '-tonelaje','number','Tonelaje procesado','TM/h','',prevM.tonelaje) : '') +
+            field(base + '-densidad','number','Densidad de pulpa (descarga)','g/cm³','',prevM.densidad) +
+            field(base + '-malla16','number','% Malla #16','%','',prevM.malla16) +
+            field(base + '-probeta','number','Volumen de probeta','','',prevM.probeta) +
+          '</div>' +
+          '<div class="field motivo-field" id="' + base + '-motivo-wrap">' +
+            '<label for="' + base + '-motivo">Motivo de parada</label>' +
+            '<select id="' + base + '-motivo">' + motivoOptions(MOTIVOS_PARADA_MOLIENDA) + '</select>' +
+          '</div>' +
+        '</div>';
+    });
+
+    formContainer.innerHTML = html;
+
+    lista.forEach(function(m){
+      var base = prefix + '-' + m.id;
+      var toggle = document.getElementById(base + '-estado');
+      var medicion = document.getElementById(base + '-medicion');
+      var motivoWrap = document.getElementById(base + '-motivo-wrap');
+      toggle.querySelectorAll('.estado-btn').forEach(function(btn){
+        btn.addEventListener('click', function(){
+          toggle.querySelectorAll('.estado-btn').forEach(function(b){ b.classList.remove('active'); });
+          btn.classList.add('active');
+          var parado = btn.dataset.estado === 'parado';
+          medicion.style.display = parado ? 'none' : '';
+          motivoWrap.classList.toggle('show', parado);
+        });
+      });
+    });
+  }
+
+  // ---------- Molienda: clasificación (ZAF, hidrociclones, Cavex) ----------
+  function renderClasificacion(circuitos, titulo, prefix, subareaId){
+    var html =
+      '<p class="section-label"><span class="dot" style="--dot:' + MOLIENDA_COLOR + '"></span>' + titulo + '</p>' +
+      '<p class="section-sub">Densidad y % malla #70 de cada equipo, para verificar que estén clasificando fino y no mandando grueso al over.</p>';
+
+    circuitos.forEach(function(circ){
+      html += '<p class="detail-block-title" style="margin-top:18px;">' + circ.label + '</p>' +
+        '<table style="margin-bottom:6px;"><thead><tr><th>Equipo</th><th>Estado</th><th>Densidad</th><th>% Malla #70</th></tr></thead><tbody>';
+      circ.equipos.forEach(function(z){
+        var base = 'cl-' + prefix + '-' + z.id;
+        var prevZ = lastNested('molienda', subareaId, 'zafs', z.id) || {};
+        var prevDens = (prevZ.densidad !== undefined) ? ' value="' + escapeHtml(prevZ.densidad) + '"' : '';
+        var prevMalla = (prevZ.malla70 !== undefined) ? ' value="' + escapeHtml(prevZ.malla70) + '"' : '';
+        html += '<tr><td style="font-weight:600;">' + z.label + '</td>' +
+          '<td><div class="estado-toggle-sm" id="' + base + '-estado">' +
+            '<button type="button" class="estado-btn-sm active" data-estado="funcionando">Func.</button>' +
+            '<button type="button" class="estado-btn-sm" data-estado="parado">Parado</button>' +
+          '</div></td>' +
+          '<td><input type="number" step="any" inputmode="decimal" id="' + base + '-densidad"' + prevDens + ' class="tbl-input" style="width:100px;"></td>' +
+          '<td><input type="number" step="any" inputmode="decimal" id="' + base + '-malla70"' + prevMalla + ' class="tbl-input" style="width:100px;"></td></tr>';
+      });
+      html += '</tbody></table>';
+    });
+
+    formContainer.innerHTML = html;
+
+    circuitos.forEach(function(circ){
+      circ.equipos.forEach(function(z){
+        var base = 'cl-' + prefix + '-' + z.id;
+        var toggle = document.getElementById(base + '-estado');
+        var densidadInput = document.getElementById(base + '-densidad');
+        var malla70Input = document.getElementById(base + '-malla70');
+        toggle.querySelectorAll('.estado-btn-sm').forEach(function(btn){
+          btn.addEventListener('click', function(){
+            toggle.querySelectorAll('.estado-btn-sm').forEach(function(b){ b.classList.remove('active'); });
+            btn.classList.add('active');
+            var parado = btn.dataset.estado === 'parado';
+            densidadInput.disabled = parado;
+            malla70Input.disabled = parado;
+            if(parado){ densidadInput.value = ''; malla70Input.value = ''; }
+            densidadInput.style.opacity = parado ? .4 : 1;
+            malla70Input.style.opacity = parado ? .4 : 1;
+          });
+        });
+      });
+    });
+  }
+
+  // ---------- Bombas ----------
+  function renderBombas(){
+    var prevRel = lastNested('bombas', undefined, 'especiales', 'relave_llegada') || {};
+    var html = '<p class="section-label"><span class="dot" style="--dot:' + BOMBAS_COLOR + '"></span>Bombas</p>' +
+      '<div class="shared-box">' +
+        '<span class="tag">Relave de llegada</span>' +
+        '<div class="field-grid" style="margin-top:0;">' +
+          field('bo-relave-densidad','number','Densidad','g/cm³','',prevRel.densidad) +
+          field('bo-relave-malla70','number','% Malla #70','%','',prevRel.malla70) +
+        '</div>' +
+      '</div>';
+
+    BOMBAS_LIST.forEach(function(b){
+      var base = 'bo-' + b.id;
+      var prevB = lastNested('bombas', undefined, 'equipos', b.id) || {};
+      html +=
+        '<div class="equipo-card">' +
+          '<div class="equipo-head">' +
+            '<span class="equipo-title"><span class="dot" style="--dot:' + b.color + '"></span>' + b.label + '</span>' +
+            '<div class="estado-toggle" id="' + base + '-estado">' +
+              '<button type="button" class="estado-btn active" data-estado="funcionando">Funcionando</button>' +
+              '<button type="button" class="estado-btn" data-estado="parado">Parado</button>' +
+            '</div>' +
+          '</div>' +
+          '<div class="field-grid" id="' + base + '-medicion">' +
+            field(base + '-densidad','number','Densidad','g/cm³','',prevB.densidad) +
+            field(base + '-amperaje','number','Amperaje','A','',prevB.amperaje) +
+            field(base + '-horasop','number','Horas operadas','h') +
+          '</div>' +
+        '</div>';
+    });
+
+    formContainer.innerHTML = html;
+
+    BOMBAS_LIST.forEach(function(b){
+      var base = 'bo-' + b.id;
+      var toggle = document.getElementById(base + '-estado');
+      var medicion = document.getElementById(base + '-medicion');
+      toggle.querySelectorAll('.estado-btn').forEach(function(btn){
+        btn.addEventListener('click', function(){
+          toggle.querySelectorAll('.estado-btn').forEach(function(b2){ b2.classList.remove('active'); });
+          btn.classList.add('active');
+          medicion.style.display = (btn.dataset.estado === 'parado') ? 'none' : '';
+        });
+      });
+    });
+  }
+
+  // ---------- Filtro ----------
+  function renderFiltro(){
+    var html = '<p class="section-label"><span class="dot" style="--dot:' + FILTRO_COLOR + '"></span>Filtro</p>' +
+      '<p class="section-sub">Densidad de pulpa, reactivo F-710, horas operadas y tu percepción del nivel de humedad del mineral filtrado, por cada filtro.</p>';
+
+    FILTROS.forEach(function(f){
+      var base = 'ft-' + f.id;
+      var prevF = lastNested('filtro', undefined, 'equipos', f.id) || {};
+      html +=
+        '<div class="equipo-card">' +
+          '<div class="equipo-head">' +
+            '<span class="equipo-title"><span class="dot" style="--dot:' + f.color + '"></span>' + f.label + '</span>' +
+          '</div>' +
+          (f.material ? '<div class="field-grid" style="margin-bottom:0;">' + selectField(base + '-material','Material que está filtrando ahora',['Cu','Pb'],prevF.material) + '</div>' : '') +
+          '<div class="field-grid">' +
+            field(base + '-densidad','number','Densidad de pulpa','g/cm³','',prevF.densidad) +
+            field(base + '-f710','number','Reactivo F-710','','',prevF.f710) +
+            field(base + '-horasop','number','Horas operadas','h') +
+            selectField(base + '-humedad','Nivel de humedad (a tu criterio)',NIVELES_HUMEDAD_FILTRO,prevF.humedad) +
+          '</div>' +
+        '</div>';
+    });
+
+    formContainer.innerHTML = html;
+  }
+
+  // ---------- simple areas (bombas, relave) ----------
+  function renderSimpleForm(key){
+    var a = SIMPLE_AREAS[key];
+    var html = '<p class="section-label"><span class="dot" style="--dot:' + AREA_COLORS[key] + '"></span>' + a.label + '</p><div class="field-grid">';
+    var prevS = lastValores(key) || {};
+    a.fields.forEach(function(f){
+      html += field('sf-' + f.id, 'number', f.label, f.unit, '', prevS[f.id]);
+    });
+    html += '</div>';
+    formContainer.innerHTML = html;
+  }
+
+  // ---------- valor anterior ----------
+  function lastValores(area, subarea){
+    for(var i=0;i<records.length;i++){
+      var r = records[i];
+      if(r.area === area && (subarea === undefined || r.subarea === subarea)){
+        return r.valores || {};
+      }
+    }
+    return null;
+  }
+  function lastNested(area, subarea, containerKey, itemId){
+    var top = lastValores(area, subarea);
+    if(!top || !top[containerKey]) return null;
+    return top[containerKey][itemId] || null;
+  }
+
+  // ---------- field builders ----------
+  function field(id, type, label, unit, hint, prevVal){
+    var unitTxt = unit ? ' <span class="unit">(' + unit + ')</span>' : '';
+    var hasPrev = prevVal !== undefined && prevVal !== null && prevVal !== '';
+    var prevHint = hasPrev ? ('Anterior: ' + prevVal + (unit ? ' ' + unit : '')) : '';
+    var combinedHint = [hint, prevHint].filter(Boolean).join(' · ');
+    var hintTxt = combinedHint ? '<span class="hint">' + combinedHint + '</span>' : '';
+    var inputAttrs = type === 'number' ? ' step="any" inputmode="decimal"' : '';
+    var valueAttr = hasPrev ? ' value="' + escapeHtml(prevVal) + '"' : '';
+    return '<div class="field"><label for="' + id + '">' + label + unitTxt + '</label>' +
+      '<input type="' + type + '" id="' + id + '"' + inputAttrs + valueAttr + '>' + hintTxt + '</div>';
+  }
+  function selectField(id, label, options, prevVal){
+    var html = '<div class="field"><label for="' + id + '">' + label + '</label><select id="' + id + '"><option value="">Selecciona...</option>';
+    options.forEach(function(o){
+      var sel = (prevVal !== undefined && prevVal === o) ? ' selected' : '';
+      html += '<option value="' + o + '"' + sel + '>' + o + '</option>';
+    });
+    html += '</select></div>';
+    return html;
+  }
+  function motivoOptions(lista){
+    var html = '<option value="">Selecciona...</option>';
+    (lista || MOTIVOS_PARADA).forEach(function(m){ html += '<option value="' + m + '">' + m + '</option>'; });
+    return html;
+  }
+  function toggleMotivo(horasParadaId, wrapId){
+    var v = parseFloat(document.getElementById(horasParadaId).value);
+    var wrap = document.getElementById(wrapId);
+    wrap.classList.toggle('show', !isNaN(v) && v > 0);
+  }
+  function updateDispoChip(chipId, op, pa){
+    var chip = document.getElementById(chipId);
+    var d = calcDispo(op, pa);
+    if(d === null){
+      chip.textContent = 'Disponibilidad: —';
+      chip.classList.remove('ok','warn');
+    }else{
+      chip.textContent = 'Disponibilidad: ' + d + '%';
+      chip.classList.toggle('ok', d >= 85);
+      chip.classList.toggle('warn', d < 70);
+    }
+  }
+
+  selectArea(currentArea);
+
+  // ---------- filter area dropdown (historial) ----------
+  var filterArea = document.getElementById('filter-area');
+  AREA_ORDER.forEach(function(key){
+    var opt = document.createElement('option');
+    opt.value = key;
+    opt.textContent = AREA_LABELS[key];
+    filterArea.appendChild(opt);
+  });
+
+  // ---------- save ----------
+  var btnSave = document.getElementById('btn-save');
+  var toast = document.getElementById('toast');
+  var toastTimer = null;
+  function showToast(msg, isErr){
+    toast.textContent = msg;
+    toast.classList.toggle('err', !!isErr);
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ toast.classList.remove('show'); }, 3200);
+  }
+
+  function buildFase1Doc(){
+    var horasop = document.getElementById('f1-horasop').value;
+    var horaspa = document.getElementById('f1-horaspa').value;
+    var valores = {
+      tonelaje: num(document.getElementById('f1-tonelaje')),
+      css: txt(document.getElementById('f1-css')),
+      humedad: document.getElementById('f1-humedad').value || undefined,
+      horas_operativas: num(document.getElementById('f1-horasop')),
+      horas_parada: num(document.getElementById('f1-horaspa')),
+      motivo_parada: (parseFloat(horaspa) > 0) ? (document.getElementById('f1-motivo').value || undefined) : undefined,
+      disponibilidad: calcDispo(horasop, horaspa) === null ? undefined : calcDispo(horasop, horaspa)
+    };
+    Object.keys(valores).forEach(function(k){ if(valores[k] === undefined) delete valores[k]; });
+    var anyFilled = Object.keys(valores).length > 0;
+    return {subarea:'fase1', subareaLabel:'Fase 1 · Primaria', valores: valores, anyFilled: anyFilled};
+  }
+
+  function buildFase2Doc(){
+    var tonelaje = num(document.getElementById('f2-tonelaje'));
+    var equipos = {};
+    var anyFilled = tonelaje !== undefined;
+    FASE2_EQUIPOS.forEach(function(eq){
+      var horasop = document.getElementById('f2-' + eq.id + '-horasop').value;
+      var horaspa = document.getElementById('f2-' + eq.id + '-horaspa').value;
+      var v = {
+        css: num(document.getElementById('f2-' + eq.id + '-css')),
+        presion: num(document.getElementById('f2-' + eq.id + '-presion')),
+        horas_operativas: num(document.getElementById('f2-' + eq.id + '-horasop')),
+        horas_parada: num(document.getElementById('f2-' + eq.id + '-horaspa')),
+        motivo_parada: (parseFloat(horaspa) > 0) ? (document.getElementById('f2-' + eq.id + '-motivo').value || undefined) : undefined,
+        disponibilidad: calcDispo(horasop, horaspa) === null ? undefined : calcDispo(horasop, horaspa)
+      };
+      Object.keys(v).forEach(function(k){ if(v[k] === undefined) delete v[k]; });
+      if(Object.keys(v).length > 0){
+        equipos[eq.id] = v;
+        equipos[eq.id].label = eq.label;
+        anyFilled = true;
+      }
+    });
+    var out = {subarea:'fase2', subareaLabel:'Fase 2 · Secundaria y terciarias', valores: {tonelaje_faja2: tonelaje, equipos: equipos}, anyFilled: anyFilled};
+    if(tonelaje === undefined) delete out.valores.tonelaje_faja2;
+    return out;
+  }
+
+  function buildZarandasDoc(){
+    var zarandas = {};
+    var anyFilled = false;
+    ZARANDAS.forEach(function(z){
+      var v = {
+        malla: num(document.getElementById('za-' + z.id + '-malla')),
+        horas_operativas: num(document.getElementById('za-' + z.id + '-horasop')),
+        horas_parada: num(document.getElementById('za-' + z.id + '-horaspa'))
+      };
+      Object.keys(v).forEach(function(k){ if(v[k] === undefined) delete v[k]; });
+      if(Object.keys(v).length > 0){
+        zarandas[z.id] = v;
+        zarandas[z.id].label = z.label;
+        anyFilled = true;
+      }
+    });
+    return {subarea:'zarandas', subareaLabel:'Zarandas', valores: {zarandas: zarandas}, anyFilled: anyFilled};
+  }
+
+  function buildMolinosDoc(lista, prefix, subareaId, subareaLabel, incluirTonelaje){
+    var equipos = {};
+    var anyFilled = false;
+    lista.forEach(function(m){
+      var base = prefix + '-' + m.id;
+      var toggle = document.getElementById(base + '-estado');
+      var activeBtn = toggle.querySelector('.estado-btn.active');
+      var estado = activeBtn ? activeBtn.dataset.estado : 'funcionando';
+      var v;
+      if(estado === 'parado'){
+        v = {
+          estado: 'Parado',
+          motivo_parada: document.getElementById(base + '-motivo').value || undefined
+        };
+        Object.keys(v).forEach(function(k){ if(v[k] === undefined) delete v[k]; });
+        equipos[m.id] = v;
+        equipos[m.id].label = m.label;
+        anyFilled = true;
+      }else{
+        v = {
+          tonelaje: incluirTonelaje ? num(document.getElementById(base + '-tonelaje')) : undefined,
+          densidad: num(document.getElementById(base + '-densidad')),
+          malla16: num(document.getElementById(base + '-malla16')),
+          probeta: num(document.getElementById(base + '-probeta'))
+        };
+        Object.keys(v).forEach(function(k){ if(v[k] === undefined) delete v[k]; });
+        if(Object.keys(v).length > 0){
+          v.estado = 'Funcionando';
+          equipos[m.id] = v;
+          equipos[m.id].label = m.label;
+          anyFilled = true;
+        }
+      }
+    });
+    return {subarea: subareaId, subareaLabel: subareaLabel, valores: {equipos: equipos}, anyFilled: anyFilled};
+  }
+
+  function buildClasificacionDoc(circuitos, prefix, subareaId, subareaLabel){
+    var zafs = {};
+    var anyFilled = false;
+    circuitos.forEach(function(circ){
+      circ.equipos.forEach(function(z){
+        var base = 'cl-' + prefix + '-' + z.id;
+        var toggle = document.getElementById(base + '-estado');
+        var activeBtn = toggle.querySelector('.estado-btn-sm.active');
+        var estado = activeBtn ? activeBtn.dataset.estado : 'funcionando';
+        var v;
+        if(estado === 'parado'){
+          v = {estado: 'Parado'};
+          zafs[z.id] = v;
+          zafs[z.id].label = z.label;
+          zafs[z.id].circuito = circ.label;
+          anyFilled = true;
+        }else{
+          v = {
+            densidad: num(document.getElementById(base + '-densidad')),
+            malla70: num(document.getElementById(base + '-malla70'))
+          };
+          Object.keys(v).forEach(function(k){ if(v[k] === undefined) delete v[k]; });
+          if(Object.keys(v).length > 0){
+            v.estado = 'Funcionando';
+            zafs[z.id] = v;
+            zafs[z.id].label = z.label;
+            zafs[z.id].circuito = circ.label;
+            anyFilled = true;
+          }
+        }
+      });
+    });
+    return {subarea: subareaId, subareaLabel: subareaLabel, valores: {zafs: zafs}, anyFilled: anyFilled};
+  }
+
+  function buildFlotacionDoc(circId){
+    var circ = FLOTACION_CIRCUITOS[circId];
+    var celdas = {};
+    var anyFilled = false;
+    circ.celdas.forEach(function(c){
+      var base = 'fl-' + circId + '-' + c.id;
+      var isAcond = c.tipo === 'acond';
+      var v = {ph: num(document.getElementById(base + '-ph'))};
+      if(!isAcond){
+        v.nivel_espuma = num(document.getElementById(base + '-espuma'));
+        v.aspecto_espuma = txt(document.getElementById(base + '-aspecto'));
+        v.flujo_aire = num(document.getElementById(base + '-aire'));
+      }
+      Object.keys(v).forEach(function(k){ if(v[k] === undefined) delete v[k]; });
+      if(Object.keys(v).length > 0){
+        celdas[c.id] = v;
+        celdas[c.id].label = c.label;
+        anyFilled = true;
+      }
+    });
+    return {subarea: circId, subareaLabel: circ.label, valores: {celdas: celdas}, anyFilled: anyFilled};
+  }
+
+  function buildPlateoDoc(groupId){
+    var group = PLATEO_GROUPS[groupId];
+    var items = {};
+    var anyFilled = false;
+    group.items.forEach(function(p){
+      var base = 'pl-' + p.id;
+      var v = {pct: num(document.getElementById(base + '-pct'))};
+      if(p.especial){
+        v.granulometria = document.getElementById(base + '-granulometria').value || undefined;
+      }
+      Object.keys(v).forEach(function(k){ if(v[k] === undefined) delete v[k]; });
+      var fileInput = document.getElementById(base + '-foto');
+      var hasFile = fileInput.files && fileInput.files[0];
+      if(Object.keys(v).length > 0 || hasFile){
+        v.label = p.label;
+        items[p.id] = v;
+        anyFilled = true;
+      }
+    });
+    return {subarea: groupId, subareaLabel: group.label, valores: {items: items}, anyFilled: anyFilled};
+  }
+
+  function buildBombasDoc(){
+    var especiales = {};
+    var relD = num(document.getElementById('bo-relave-densidad'));
+    var relM = num(document.getElementById('bo-relave-malla70'));
+    var anyFilled = false;
+    if(relD !== undefined || relM !== undefined){
+      especiales.relave_llegada = {};
+      if(relD !== undefined) especiales.relave_llegada.densidad = relD;
+      if(relM !== undefined) especiales.relave_llegada.malla70 = relM;
+      anyFilled = true;
+    }
+
+    var equipos = {};
+    BOMBAS_LIST.forEach(function(b){
+      var base = 'bo-' + b.id;
+      var toggle = document.getElementById(base + '-estado');
+      var activeBtn = toggle.querySelector('.estado-btn.active');
+      var estado = activeBtn ? activeBtn.dataset.estado : 'funcionando';
+      var v;
+      if(estado === 'parado'){
+        v = {estado: 'Parado', label: b.label};
+        equipos[b.id] = v;
+        anyFilled = true;
+      }else{
+        v = {
+          densidad: num(document.getElementById(base + '-densidad')),
+          amperaje: num(document.getElementById(base + '-amperaje')),
+          horas_operadas: num(document.getElementById(base + '-horasop'))
+        };
+        Object.keys(v).forEach(function(k){ if(v[k] === undefined) delete v[k]; });
+        if(Object.keys(v).length > 0){
+          v.estado = 'Funcionando';
+          v.label = b.label;
+          equipos[b.id] = v;
+          anyFilled = true;
+        }
+      }
+    });
+
+    return {valores: {especiales: especiales, equipos: equipos}, anyFilled: anyFilled};
+  }
+
+  function buildFiltroDoc(){
+    var equipos = {};
+    var anyFilled = false;
+    FILTROS.forEach(function(f){
+      var base = 'ft-' + f.id;
+      var v = {
+        densidad: num(document.getElementById(base + '-densidad')),
+        f710: num(document.getElementById(base + '-f710')),
+        horas_operadas: num(document.getElementById(base + '-horasop')),
+        humedad: document.getElementById(base + '-humedad').value || undefined
+      };
+      if(f.material){
+        v.material = document.getElementById(base + '-material').value || undefined;
+      }
+      Object.keys(v).forEach(function(k){ if(v[k] === undefined) delete v[k]; });
+      if(Object.keys(v).length > 0){
+        v.label = f.label;
+        equipos[f.id] = v;
+        anyFilled = true;
+      }
+    });
+    return {valores: {equipos: equipos}, anyFilled: anyFilled};
+  }
+
+  function buildSimpleDoc(key){
+    var a = SIMPLE_AREAS[key];
+    var valores = {};
+    var anyFilled = false;
+    a.fields.forEach(function(f){
+      var el = document.getElementById('sf-' + f.id);
+      if(el.value !== ''){ valores[f.id] = parseFloat(el.value); anyFilled = true; }
+    });
+    return {valores: valores, anyFilled: anyFilled};
+  }
+
+  function clearForm(){
+    if(currentArea === 'chancado'){
+      selectChancadoSub(currentSub);
+    }else if(currentArea === 'molienda'){
+      selectMoliendaSub(currentSub);
+    }else if(currentArea === 'flotacion'){
+      selectFlotacionSub(currentSub);
+    }else if(currentArea === 'filtro'){
+      renderFiltro();
+    }else if(currentArea === 'bombas'){
+      renderBombas();
+    }else{
+      renderSimpleForm(currentArea);
+    }
+  }
+
+  btnSave.addEventListener('click', async function(){
+    var operador = document.getElementById('f-operador').value.trim();
+    var fecha = document.getElementById('f-fecha').value;
+    var bloque = bloqueById(fBloque.value);
+    var guardia = fGuardia.value;
+
+    if(!operador){ showToast('Ingresa el nombre del operador', true); return; }
+    if(!fecha){ showToast('Selecciona la fecha', true); return; }
+    if(!bloque){ showToast('Selecciona el bloque horario', true); return; }
+    if(!guardia){ showToast('Selecciona la guardia', true); return; }
+
+    var doc = {
+      area: currentArea,
+      areaLabel: AREA_LABELS[currentArea],
+      operador: operador,
+      guardia: guardia,
+      bloque: bloque.id,
+      bloqueLabel: bloque.label,
+      fecha: fecha,
+      observaciones: document.getElementById('f-obs').value.trim(),
+      timestamp: Date.now()
+    };
+
+    var built;
+    if(currentArea === 'chancado'){
+      if(currentSub === 'fase1') built = buildFase1Doc();
+      else if(currentSub === 'fase2') built = buildFase2Doc();
+      else built = buildZarandasDoc();
+      doc.subarea = built.subarea;
+      doc.subareaLabel = built.subareaLabel;
+      doc.valores = built.valores;
+    }else if(currentArea === 'molienda'){
+      if(currentSub === 'primaria') built = buildMolinosDoc(MOLINOS_PRIMARIOS, 'mp', 'primaria', 'Molienda primaria', true);
+      else if(currentSub === 'secundaria') built = buildMolinosDoc(MOLINOS_SECUNDARIOS, 'ms', 'secundaria', 'Molienda secundaria', false);
+      else if(currentSub === 'zaf') built = buildClasificacionDoc(ZAF_CIRCUITOS, 'zaf', 'zaf', 'ZAF');
+      else built = buildClasificacionDoc(HIDROCAVEX_CIRCUITOS, 'hc', 'hidrocavex', 'Hidrociclón y Cavex');
+      doc.subarea = built.subarea;
+      doc.subareaLabel = built.subareaLabel;
+      doc.valores = built.valores;
+    }else if(currentArea === 'flotacion'){
+      var isPlateo = (currentSub === 'plateo_pbcu' || currentSub === 'plateo_znrelave');
+      built = isPlateo ? buildPlateoDoc(currentSub) : buildFlotacionDoc(currentSub);
+      doc.subarea = built.subarea;
+      doc.subareaLabel = built.subareaLabel;
+      doc.valores = built.valores;
+    }else if(currentArea === 'filtro'){
+      built = buildFiltroDoc();
+      doc.valores = built.valores;
+    }else if(currentArea === 'bombas'){
+      built = buildBombasDoc();
+      doc.valores = built.valores;
+    }else{
+      built = buildSimpleDoc(currentArea);
+      doc.valores = built.valores;
+    }
+
+    if(!built.anyFilled){ showToast('Ingresa al menos un dato antes de guardar', true); return; }
+    if(!db){ showToast('Sin conexión a Firebase. Intenta de nuevo.', true); return; }
+
+    btnSave.disabled = true;
+    try{
+      var file = fImagen.files && fImagen.files[0];
+      if(file){
+        try{
+          var dataUrl = await compressImageToDataUrl(file, 700, 0.55);
+          doc.imagen = {data: dataUrl};
+        }catch(e){
+          showToast('No se pudo procesar la foto; se guarda el registro sin foto.', true);
+        }
+      }
+      if(currentArea === 'flotacion' && (currentSub === 'plateo_pbcu' || currentSub === 'plateo_znrelave')){
+        var pGroup = PLATEO_GROUPS[currentSub];
+        for(var pi=0; pi<pGroup.items.length; pi++){
+          var pItem = pGroup.items[pi];
+          var pInput = document.getElementById('pl-' + pItem.id + '-foto');
+          var pFile = pInput.files && pInput.files[0];
+          if(pFile){
+            try{
+              var pDataUrl = await compressImageToDataUrl(pFile, 700, 0.55);
+              if(!doc.valores.items[pItem.id]){
+                doc.valores.items[pItem.id] = {label: pItem.label};
+              }
+              doc.valores.items[pItem.id].imagen = {data: pDataUrl};
+            }catch(e){ /* se omite esta foto si falla */ }
+          }
+        }
+      }
+      await db.collection(KPIS_COLLECTION).add(doc);
+      showToast('Registro guardado correctamente');
+      clearForm();
+      document.getElementById('f-obs').value = '';
+      fImagen.value = '';
+      imagenPreview.innerHTML = '';
+    }catch(err){
+      showToast('No se pudo guardar: ' + (err && err.message ? err.message : 'error'), true);
+    }finally{
+      btnSave.disabled = false;
+    }
+  });
+
+  // ---------- historial ----------
+  var tbody = document.getElementById('tbody-historial');
+  var emptyEl = document.getElementById('empty-historial');
+  var liveDot = document.getElementById('live-dot');
+  var liveLabel = document.getElementById('live-label');
+
+  function simpleFieldLabel(area, fid){
+    var a = SIMPLE_AREAS[area];
+    if(!a) return null;
+    for(var i=0;i<a.fields.length;i++){ if(a.fields[i].id === fid) return a.fields[i]; }
+    return null;
+  }
+
+  function summarize(rec){
+    if(rec.area === 'chancado'){
+      if(rec.subarea === 'fase1'){
+        var v = rec.valores || {};
+        var parts = [];
+        if(v.tonelaje !== undefined) parts.push('Ton: ' + v.tonelaje + ' TM/h');
+        if(v.css) parts.push('CSS: ' + v.css);
+        if(v.disponibilidad !== undefined) parts.push('Disp: ' + v.disponibilidad + '%');
+        return (rec.subareaLabel || '') + (parts.length ? ' · ' + parts.join(' · ') : '');
+      }
+      if(rec.subarea === 'fase2'){
+        var eqCount = rec.valores && rec.valores.equipos ? Object.keys(rec.valores.equipos).length : 0;
+        var t = rec.valores && rec.valores.tonelaje_faja2 !== undefined ? 'Faja2: ' + rec.valores.tonelaje_faja2 + ' TM/h · ' : '';
+        return (rec.subareaLabel || '') + ' · ' + t + eqCount + ' equipo(s) registrado(s)';
+      }
+      if(rec.subarea === 'zarandas'){
+        var zCount = rec.valores && rec.valores.zarandas ? Object.keys(rec.valores.zarandas).length : 0;
+        return (rec.subareaLabel || '') + ' · ' + zCount + ' zaranda(s) registrada(s)';
+      }
+    }
+    if(rec.area === 'molienda'){
+      if(rec.subarea === 'primaria' || rec.subarea === 'secundaria'){
+        var mCount = rec.valores && rec.valores.equipos ? Object.keys(rec.valores.equipos).length : 0;
+        return (rec.subareaLabel || '') + ' · ' + mCount + ' molino(s) registrado(s)';
+      }
+      if(rec.subarea === 'zaf' || rec.subarea === 'hidrocavex'){
+        var zfCount = rec.valores && rec.valores.zafs ? Object.keys(rec.valores.zafs).length : 0;
+        return (rec.subareaLabel || '') + ' · ' + zfCount + ' equipo(s) registrado(s)';
+      }
+    }
+    if(rec.area === 'flotacion'){
+      if(rec.subarea === 'plateo_pbcu' || rec.subarea === 'plateo_znrelave'){
+        var plCount = rec.valores && rec.valores.items ? Object.keys(rec.valores.items).length : 0;
+        return (rec.subareaLabel || 'Plateo') + ' · ' + plCount + ' muestra(s) registrada(s)';
+      }
+      var flCount = rec.valores && rec.valores.celdas ? Object.keys(rec.valores.celdas).length : 0;
+      return (rec.subareaLabel || '') + ' · ' + flCount + ' celda(s) registrada(s)';
+    }
+    if(rec.area === 'filtro'){
+      var ftCount = rec.valores && rec.valores.equipos ? Object.keys(rec.valores.equipos).length : 0;
+      return 'Filtro · ' + ftCount + ' filtro(s) registrado(s)';
+    }
+    if(rec.area === 'bombas'){
+      var boCount = rec.valores && rec.valores.equipos ? Object.keys(rec.valores.equipos).length : 0;
+      return 'Bombas · ' + boCount + ' bomba(s) registrada(s)';
+    }
+    var a = SIMPLE_AREAS[rec.area];
+    if(!a) return '—';
+    var parts2 = [];
+    for(var i=0;i<a.fields.length && parts2.length<2;i++){
+      var f = a.fields[i];
+      if(rec.valores && rec.valores[f.id] !== undefined){
+        parts2.push(f.label + ': ' + rec.valores[f.id] + (f.unit ? ' ' + f.unit : ''));
+      }
+    }
+    return parts2.length ? parts2.join(' · ') : '—';
+  }
+
+  function detailHtmlFase1(v){
+    var items = [
+      ['tonelaje','Tonelaje procesado','TM/h'],
+      ['css','Ajuste CSS',''],
+      ['humedad','% Humedad',''],
+      ['horas_operativas','Horas operativas','h'],
+      ['horas_parada','Horas de parada','h'],
+      ['motivo_parada','Motivo de parada',''],
+      ['disponibilidad','Disponibilidad mecánica','%']
+    ];
+    return renderDetailGrid(v, items);
+  }
+
+  function renderDetailGrid(v, items){
+    var html = '<div class="detail-grid">';
+    items.forEach(function(it){
+      if(v[it[0]] !== undefined && v[it[0]] !== ''){
+        html += '<div class="detail-item"><span class="k">' + it[1] + '</span><span class="v">' + escapeHtml(v[it[0]]) + (it[2] ? ' ' + it[2] : '') + '</span></div>';
+      }
+    });
+    html += '</div>';
+    return html;
+  }
+
+  function buildDetailHtml(rec){
+    if(rec.area === 'chancado'){
+      if(rec.subarea === 'fase1'){
+        return '<div class="detail-block">' + detailHtmlFase1(rec.valores || {}) + '</div>';
+      }
+      if(rec.subarea === 'fase2'){
+        var html = '';
+        if(rec.valores && rec.valores.tonelaje_faja2 !== undefined){
+          html += '<div class="detail-block"><p class="detail-block-title">Dato compartido</p>' +
+            renderDetailGrid({tonelaje_faja2: rec.valores.tonelaje_faja2}, [['tonelaje_faja2','Tonelaje procesado (faja 2)','TM/h']]) + '</div>';
+        }
+        var eqs = (rec.valores && rec.valores.equipos) || {};
+        Object.keys(eqs).forEach(function(id){
+          var e = eqs[id];
+          html += '<div class="detail-block"><p class="detail-block-title">' + escapeHtml(e.label || id) + '</p>' +
+            renderDetailGrid(e, [
+              ['css','Ajuste CSS','pulg'],
+              ['presion','Presión hidráulica','MPa'],
+              ['horas_operativas','Horas operativas','h'],
+              ['horas_parada','Horas de parada','h'],
+              ['motivo_parada','Motivo de parada',''],
+              ['disponibilidad','Disponibilidad mecánica','%']
+            ]) + '</div>';
+        });
+        return html;
+      }
+      if(rec.subarea === 'zarandas'){
+        var zhtml = '';
+        var zs = (rec.valores && rec.valores.zarandas) || {};
+        Object.keys(zs).forEach(function(id){
+          var z = zs[id];
+          zhtml += '<div class="detail-block"><p class="detail-block-title">' + escapeHtml(z.label || id) + '</p>' +
+            renderDetailGrid(z, [
+              ['malla','Control de malla (Ro-Tap #5/16")','partículas'],
+              ['horas_operativas','Horas operativas','h'],
+              ['horas_parada','Horas de parada','h']
+            ]) + '</div>';
+        });
+        return zhtml;
+      }
+    }
+    if(rec.area === 'molienda'){
+      if(rec.subarea === 'primaria' || rec.subarea === 'secundaria'){
+        var mhtml = '';
+        var meqs = (rec.valores && rec.valores.equipos) || {};
+        Object.keys(meqs).forEach(function(id){
+          var e = meqs[id];
+          mhtml += '<div class="detail-block"><p class="detail-block-title">' + escapeHtml(e.label || id) + '</p>' +
+            renderDetailGrid(e, [
+              ['estado','Estado',''],
+              ['tonelaje','Tonelaje procesado','TM/h'],
+              ['densidad','Densidad de pulpa','g/cm³'],
+              ['malla16','% Malla #16','%'],
+              ['probeta','Volumen de probeta',''],
+              ['motivo_parada','Motivo de parada','']
+            ]) + '</div>';
+        });
+        return mhtml;
+      }
+      if(rec.subarea === 'zaf' || rec.subarea === 'hidrocavex'){
+        var zfhtml = '';
+        var zfs = (rec.valores && rec.valores.zafs) || {};
+        Object.keys(zfs).forEach(function(id){
+          var z = zfs[id];
+          zfhtml += '<div class="detail-block"><p class="detail-block-title">' + escapeHtml((z.circuito ? z.circuito + ' · ' : '') + (z.label || id)) + '</p>' +
+            renderDetailGrid(z, [
+              ['estado','Estado',''],
+              ['densidad','Densidad',''],
+              ['malla70','% Malla #70','%']
+            ]) + '</div>';
+        });
+        return zfhtml;
+      }
+    }
+    if(rec.area === 'flotacion'){
+      if(rec.subarea === 'plateo_pbcu' || rec.subarea === 'plateo_znrelave'){
+        var plhtml = '';
+        var pli = (rec.valores && rec.valores.items) || {};
+        Object.keys(pli).forEach(function(id){
+          var p = pli[id];
+          plhtml += '<div class="detail-block"><p class="detail-block-title">' + escapeHtml(p.label || id) + '</p>' +
+            renderDetailGrid(p, [
+              ['pct','Estimado a ojo','%'],
+              ['granulometria','Granulometría','']
+            ]);
+          if(p.imagen && p.imagen.data){
+            plhtml += '<img src="' + p.imagen.data + '" style="max-width:220px;border-radius:8px;border:1px solid var(--border);display:block;margin-top:8px;">';
+          }
+          plhtml += '</div>';
+        });
+        return plhtml;
+      }
+      var flhtml = '';
+      var flc = (rec.valores && rec.valores.celdas) || {};
+      Object.keys(flc).forEach(function(id){
+        var c = flc[id];
+        flhtml += '<div class="detail-block"><p class="detail-block-title">' + escapeHtml(c.label || id) + '</p>' +
+          renderDetailGrid(c, [
+            ['ph','pH',''],
+            ['nivel_espuma','Nivel de espuma',''],
+            ['aspecto_espuma','Aspecto de espuma',''],
+            ['flujo_aire','Flujo de aire','']
+          ]) + '</div>';
+      });
+      return flhtml;
+    }
+    if(rec.area === 'filtro'){
+      var fthtml = '';
+      var fte = (rec.valores && rec.valores.equipos) || {};
+      Object.keys(fte).forEach(function(id){
+        var f = fte[id];
+        fthtml += '<div class="detail-block"><p class="detail-block-title">' + escapeHtml(f.label || id) + '</p>' +
+          renderDetailGrid(f, [
+            ['material','Material que está filtrando',''],
+            ['densidad','Densidad de pulpa','g/cm³'],
+            ['f710','Reactivo F-710',''],
+            ['horas_operadas','Horas operadas','h'],
+            ['humedad','Nivel de humedad','']
+          ]) + '</div>';
+      });
+      return fthtml;
+    }
+    if(rec.area === 'bombas'){
+      var bohtml = '';
+      var boesp = (rec.valores && rec.valores.especiales && rec.valores.especiales.relave_llegada) || null;
+      if(boesp){
+        bohtml += '<div class="detail-block"><p class="detail-block-title">Relave de llegada</p>' +
+          renderDetailGrid(boesp, [
+            ['densidad','Densidad','g/cm³'],
+            ['malla70','% Malla #70','%']
+          ]) + '</div>';
+      }
+      var boe = (rec.valores && rec.valores.equipos) || {};
+      Object.keys(boe).forEach(function(id){
+        var b = boe[id];
+        bohtml += '<div class="detail-block"><p class="detail-block-title">' + escapeHtml(b.label || id) + '</p>' +
+          renderDetailGrid(b, [
+            ['estado','Estado',''],
+            ['densidad','Densidad','g/cm³'],
+            ['amperaje','Amperaje','A'],
+            ['horas_operadas','Horas operadas','h']
+          ]) + '</div>';
+      });
+      return bohtml;
+    }
+    // simple areas
+    var a = SIMPLE_AREAS[rec.area];
+    var items = a ? a.fields.map(function(f){ return [f.id, f.label, f.unit]; }) : [];
+    return '<div class="detail-block">' + renderDetailGrid(rec.valores || {}, items) + '</div>';
+  }
+
+  function passesFilter(rec){
+    var areaF = filterArea.value;
+    var guardiaF = document.getElementById('filter-guardia').value;
+    var opF = document.getElementById('filter-operador').value.trim().toLowerCase();
+    var desde = document.getElementById('filter-desde').value;
+    var hasta = document.getElementById('filter-hasta').value;
+    if(areaF && rec.area !== areaF) return false;
+    if(guardiaF && rec.guardia !== guardiaF) return false;
+    if(opF && rec.operador.toLowerCase().indexOf(opF) === -1) return false;
+    if(desde && rec.fecha < desde) return false;
+    if(hasta && rec.fecha > hasta) return false;
+    return true;
+  }
+
+  function renderHistorial(){
+    var filtered = records.filter(passesFilter);
+    tbody.innerHTML = '';
+    emptyEl.style.display = filtered.length ? 'none' : 'block';
+
+    filtered.forEach(function(rec){
+      var color = AREA_COLORS[rec.area] || '#888';
+      var areaLabel = AREA_LABELS[rec.area] || rec.areaLabel || rec.area;
+
+      var tr = document.createElement('tr');
+      tr.className = 'row';
+      tr.innerHTML =
+        '<td>' + rec.fecha + '</td>' +
+        '<td><span class="shift-tag">' + (rec.bloqueLabel || '—') + '</span></td>' +
+        '<td><span class="shift-tag">' + (rec.guardia ? 'Guardia ' + rec.guardia : '—') + '</span></td>' +
+        '<td><span class="area-chip" style="--dot:' + color + '"><span class="dot"></span>' + areaLabel + '</span></td>' +
+        '<td>' + escapeHtml(rec.operador) + '</td>' +
+        '<td>' + escapeHtml(summarize(rec)) + '</td>';
+      tr.addEventListener('click', function(){
+        expandedId = (expandedId === rec.id) ? null : rec.id;
+        renderHistorial();
+      });
+      tbody.appendChild(tr);
+
+      if(expandedId === rec.id){
+        var detTr = document.createElement('tr');
+        detTr.className = 'detail-row';
+        var td = document.createElement('td');
+        td.colSpan = 6;
+        var detailHtml = buildDetailHtml(rec);
+        if(rec.observaciones){
+          detailHtml += '<div class="detail-block"><p class="detail-block-title">Observaciones</p><div style="font-size:13px;">' + escapeHtml(rec.observaciones) + '</div></div>';
+        }
+        if(rec.imagen && rec.imagen.data){
+          detailHtml += '<div class="detail-block"><p class="detail-block-title">Foto del suceso</p><img src="' + rec.imagen.data + '" style="max-width:260px;border-radius:8px;border:1px solid var(--border);display:block;"></div>';
+        }
+        td.innerHTML = detailHtml;
+        detTr.appendChild(td);
+        tbody.appendChild(detTr);
+      }
+    });
+  }
+
+  [filterArea, document.getElementById('filter-guardia'), document.getElementById('filter-operador'), document.getElementById('filter-desde'), document.getElementById('filter-hasta')]
+    .forEach(function(el){ el.addEventListener('input', renderHistorial); el.addEventListener('change', renderHistorial); });
+
+  // ---------- connect to Firestore ----------
+  async function init(){
+    try{
+      db = firebase.firestore();
+    }catch(e){
+      db = null;
+    }
+    if(!db){
+      liveDot.classList.add('off');
+      liveLabel.textContent = 'No se pudo conectar a Firebase. Revisa firebaseConfig.';
+      return;
+    }
+    liveLabel.textContent = 'Conectado — los registros se actualizan en vivo';
+
+    var q = db.collection(KPIS_COLLECTION).orderBy('timestamp', 'desc').limit(500);
+    var firstLoadDone = false;
+    q.onSnapshot(function(snap){
+      records = snap.docs.map(function(d){
+        var data = d.data();
+        data.id = d.id;
+        return data;
+      });
+      renderHistorial();
+      renderCoverage();
+      if(!firstLoadDone){
+        firstLoadDone = true;
+        clearForm();
+      }
+    }, function(err){
+      liveDot.classList.add('off');
+      liveLabel.textContent = 'Se perdió la conexión en vivo (' + (err && err.code ? err.code : 'error') + ')';
+    });
+  }
+  init();
+
+})();
+</script>
+</body>
+</html>
